@@ -12,7 +12,7 @@ import { IncentiveRule } from '../src/lib/models/IncentiveRule';
 import { CompanySetting } from '../src/lib/models/CompanySetting';
 import { AuditLog } from '../src/lib/models/AuditLog';
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/nexusgo';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://kanhu2551996_db_user:7AXLCXvpMISg4d5k@cluster0.gbqvq6i.mongodb.net/';
 
 async function seed() {
   console.log('🌱 Starting NexusGo Database Seeding...');
