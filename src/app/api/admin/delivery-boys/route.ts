@@ -40,7 +40,6 @@ export async function GET(req: NextRequest) {
           status: 'SUCCESSFUL',
         });
         const todayDeliveriesCount = todayDeliveries.length;
-        const todayEarnings = todayDeliveriesCount * (driver.defaultCommission || 13);
 
         // Monthly deliveries
         const monthlyDeliveries = await Delivery.find({
@@ -49,7 +48,16 @@ export async function GET(req: NextRequest) {
           status: 'SUCCESSFUL',
         });
         const monthlyDeliveriesCount = monthlyDeliveries.length;
-        const monthlyEarnings = monthlyDeliveriesCount * (driver.defaultCommission || 13);
+
+        // Calculate earnings based on paymentType (COMMISSION vs SALARY)
+        const isSalary = driver.paymentType === 'SALARY';
+        const monthlyEarnings = isSalary
+          ? (driver.monthlySalary || 15000)
+          : monthlyDeliveriesCount * (driver.defaultCommission || 13);
+        
+        const todayEarnings = isSalary
+          ? Number(((driver.monthlySalary || 15000) / 26).toFixed(2))
+          : todayDeliveriesCount * (driver.defaultCommission || 13);
 
         // Attendance status for today
         const todayAttendance = await Attendance.findOne({

@@ -30,8 +30,9 @@ export interface IDeliveryBoy extends Document {
     ifsc?: string;
     upiId?: string;
   };
-  paymentType: string;
+  paymentType: 'COMMISSION' | 'SALARY';
   defaultCommission: number;
+  monthlySalary: number;
   status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
   createdAt: Date;
   updatedAt: Date;
@@ -68,8 +69,9 @@ const DeliveryBoySchema: Schema = new Schema(
       ifsc: { type: String, default: '' },
       upiId: { type: String, default: '' },
     },
-    paymentType: { type: String, default: 'COMMISSION' },
+    paymentType: { type: String, enum: ['COMMISSION', 'SALARY'], default: 'COMMISSION' },
     defaultCommission: { type: Number, default: 13 },
+    monthlySalary: { type: Number, default: 0 },
     status: {
       type: String,
       enum: ['ACTIVE', 'INACTIVE', 'SUSPENDED'],

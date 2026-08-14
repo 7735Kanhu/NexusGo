@@ -36,7 +36,10 @@ export async function GET(req: NextRequest) {
         const totalSuccessfulDeliveries = monthlyDeliveries.length;
 
         const commRate = driver.defaultCommission || 13;
-        const grossCommission = totalSuccessfulDeliveries * commRate;
+        const isSalary = driver.paymentType === 'SALARY';
+        const grossCommission = isSalary
+          ? (driver.monthlySalary || 15000)
+          : totalSuccessfulDeliveries * commRate;
 
         // Auto calculate bonus based on incentive rules
         let calculatedBonus = 0;
@@ -122,7 +125,10 @@ export async function POST(req: NextRequest) {
     });
     const totalSuccessfulDeliveries = monthlyDeliveries.length;
     const commRate = driver.defaultCommission || 13;
-    const grossCommission = totalSuccessfulDeliveries * commRate;
+    const isSalary = driver.paymentType === 'SALARY';
+    const grossCommission = isSalary
+      ? (driver.monthlySalary || 15000)
+      : totalSuccessfulDeliveries * commRate;
 
     const bAmount = Number(bonus || 0);
     const eAmount = Number(approvedExpenses || 0);

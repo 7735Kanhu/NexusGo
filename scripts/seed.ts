@@ -296,8 +296,9 @@ async function seed() {
         ifsc: 'BARB0NOIDAX',
         upiId: 'deepakverma@barodampay',
       },
-      paymentType: 'COMMISSION',
+      paymentType: 'SALARY',
       defaultCommission: 13,
+      monthlySalary: 15000,
       status: 'ACTIVE',
     },
     {
@@ -326,8 +327,9 @@ async function seed() {
         ifsc: 'UBIN0584736',
         upiId: 'sanjaygupta@unionbank',
       },
-      paymentType: 'COMMISSION',
+      paymentType: 'SALARY',
       defaultCommission: 13,
+      monthlySalary: 16500,
       status: 'ACTIVE',
     },
     {

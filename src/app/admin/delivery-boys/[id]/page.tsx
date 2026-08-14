@@ -121,8 +121,8 @@ export default function DeliveryBoyProfilePage() {
                 <Phone className="w-3.5 h-3.5 text-slate-400" />
                 +91 {driver.phone} • {driver.driving?.vehicleType || 'Bike'} ({driver.driving?.vehicleNumber || '-'})
               </p>
-              <p className="text-xs text-slate-400">
-                Joined: {formatDate(driver.joiningDate)} • Rate: ₹{driver.defaultCommission}/successful parcel
+              <p className="text-xs text-slate-500 font-medium">
+                Joined: {formatDate(driver.joiningDate)} • Payout: <strong className="text-emerald-700">{driver.paymentType === 'SALARY' ? `Fixed Salary ₹${(driver.monthlySalary || 15000).toLocaleString('en-IN')}/month` : `Commission ₹${driver.defaultCommission}/successful parcel`}</strong>
               </p>
             </div>
           </div>
@@ -299,8 +299,12 @@ export default function DeliveryBoyProfilePage() {
             </h3>
             <div className="space-y-2 font-mono">
               <div className="flex justify-between py-2 border-b border-slate-100">
-                <span className="text-slate-600">+ Total Commission Earned ({performance.successfulDeliveries} Parcels × ₹13):</span>
-                <strong className="text-emerald-700">{formatCurrency(performance.totalCommission)}</strong>
+                <span className="text-slate-600">
+                  + Base Payout ({driver.paymentType === 'SALARY' ? `Fixed Monthly Salary ₹${(driver.monthlySalary || 15000).toLocaleString('en-IN')}` : `${performance.successfulDeliveries} Parcels × ₹${driver.defaultCommission || 13}`}):
+                </span>
+                <strong className="text-emerald-700">
+                  {formatCurrency(driver.paymentType === 'SALARY' ? (driver.monthlySalary || 15000) : performance.totalCommission)}
+                </strong>
               </div>
               <div className="flex justify-between py-2 border-b border-slate-100">
                 <span className="text-slate-600">+ Total Approved Bonuses:</span>

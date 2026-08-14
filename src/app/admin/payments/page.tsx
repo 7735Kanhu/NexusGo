@@ -163,8 +163,9 @@ export default function PaymentsPage() {
                 <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider">
                   <tr>
                     <th className="py-3 px-4">Delivery Boy</th>
+                    <th className="py-3 px-4">Payout Type</th>
                     <th className="py-3 px-4">Successful Parcels</th>
-                    <th className="py-3 px-4">Gross Commission</th>
+                    <th className="py-3 px-4">Gross Earnings</th>
                     <th className="py-3 px-4">Bonus</th>
                     <th className="py-3 px-4">Approved Exp.</th>
                     <th className="py-3 px-4">Advances</th>
@@ -176,20 +177,33 @@ export default function PaymentsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                  {paymentsList.map((item) => (
-                    <tr key={item.driver._id} className="hover:bg-slate-50">
-                      <td className="py-3 px-4">
-                        <strong className="text-slate-900 block">{item.driver.fullName}</strong>
-                        <span className="font-mono text-[10px] text-slate-400">
-                          {item.driver.deliveryBoyId}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 font-bold text-slate-900">
-                        {item.totalSuccessfulDeliveries} × ₹{item.commissionRate}
-                      </td>
-                      <td className="py-3 px-4 font-bold text-slate-900">
-                        {formatCurrency(item.grossCommission)}
-                      </td>
+                  {paymentsList.map((item) => {
+                    const isSalary = item.driver?.paymentType === 'SALARY';
+                    return (
+                      <tr key={item.driver._id} className="hover:bg-slate-50">
+                        <td className="py-3 px-4">
+                          <strong className="text-slate-900 block">{item.driver.fullName}</strong>
+                          <span className="font-mono text-[10px] text-slate-400">
+                            {item.driver.deliveryBoyId}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              isSalary
+                                ? 'bg-indigo-100 text-indigo-800'
+                                : 'bg-emerald-100 text-emerald-800'
+                            }`}
+                          >
+                            {isSalary ? 'FIXED SALARY' : 'COMMISSION'}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 font-bold text-slate-900">
+                          {item.totalSuccessfulDeliveries} Parcels
+                        </td>
+                        <td className="py-3 px-4 font-bold text-slate-900">
+                          {formatCurrency(item.grossCommission)}
+                        </td>
                       <td className="py-3 px-4 text-emerald-700 font-bold">
                         +{formatCurrency(item.bonus)}
                       </td>
@@ -239,8 +253,9 @@ export default function PaymentsPage() {
                         </div>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
+                  );
+                })}
+              </tbody>
               </table>
             </div>
           )}
