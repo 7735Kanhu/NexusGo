@@ -53,6 +53,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [dailyTarget, setDailyTarget] = useState<number>(330);
+
+  React.useEffect(() => {
+    const fetchTarget = async () => {
+      try {
+        const res = await fetch('/api/admin/settings');
+        const json = await res.json();
+        if (json.setting?.dailyTarget) {
+          setDailyTarget(json.setting.dailyTarget);
+        }
+      } catch (err) {
+        console.error('Error fetching settings target:', err);
+      }
+    };
+    fetchTarget();
+  }, []);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -101,7 +117,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="flex items-center gap-4">
           <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            Target: 330 Parcels/Day
+            Target: {dailyTarget} Parcels/Day
           </div>
 
           <div className="flex items-center gap-3 pl-3 border-l border-slate-200">

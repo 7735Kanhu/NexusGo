@@ -58,6 +58,9 @@ export default function SettingsPage() {
       if (!res.ok) throw new Error(json.error || 'Failed to update settings');
 
       setMessage('Company rates and settings saved successfully!');
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
     } catch (err: any) {
       alert(err.message || 'Error updating settings');
     } finally {
