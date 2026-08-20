@@ -4,6 +4,7 @@ import { DeliveryBoy } from '@/lib/models/DeliveryBoy';
 import { Delivery } from '@/lib/models/Delivery';
 import { Attendance } from '@/lib/models/Attendance';
 import { logAudit } from '@/lib/audit';
+import { sendDriverWelcomeEmail } from '@/lib/email';
 
 export async function GET(req: NextRequest) {
   try {
@@ -128,10 +129,27 @@ export async function POST(req: NextRequest) {
       newValue: newDriver.toObject(),
     });
 
+    // Send onboarding welcome email if email address is provided
+    let emailStatus = null;
+    if (newDriver.email) {
+      emailStatus = await sendDriverWelcomeEmail({
+        driverName: newDriver.fullName,
+        driverEmail: newDriver.email,
+        deliveryBoyId: newDriver.deliveryBoyId,
+        fhrId: newDriver.fhrId,
+        phone: newDriver.phone,
+        paymentType: newDriver.paymentType,
+        defaultCommission: newDriver.defaultCommission,
+        monthlySalary: newDriver.monthlySalary,
+        joiningDate: newDriver.joiningDate,
+      });
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Delivery Boy registered successfully',
       driver: newDriver,
+      emailStatus,
     });
   } catch (error: any) {
     console.error('Register delivery boy error:', error);

@@ -202,6 +202,7 @@ export default function DeliveryBoyProfilePage() {
                 Personal Information
               </h3>
               <div className="space-y-2">
+                <p><strong className="text-slate-500">Email Address:</strong> {driver.email || '-'}</p>
                 <p><strong className="text-slate-500">Date of Birth:</strong> {formatDate(driver.dob)}</p>
                 <p><strong className="text-slate-500">Address:</strong> {driver.address || '-'}</p>
                 <p><strong className="text-slate-500">Emergency Contact:</strong> {driver.emergencyContact || '-'}</p>

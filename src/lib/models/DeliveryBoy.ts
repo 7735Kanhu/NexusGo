@@ -4,6 +4,7 @@ export interface IDeliveryBoy extends Document {
   deliveryBoyId: string;
   fhrId?: string;
   fullName: string;
+  email?: string;
   photo?: string;
   phone: string;
   dob?: string;
@@ -44,6 +45,7 @@ const DeliveryBoySchema: Schema = new Schema(
     deliveryBoyId: { type: String, required: true, unique: true, trim: true },
     fhrId: { type: String, default: '', trim: true },
     fullName: { type: String, required: true, trim: true },
+    email: { type: String, default: '', lowercase: true, trim: true },
     photo: { type: String, default: '' },
     phone: { type: String, required: true, trim: true },
     dob: { type: String, default: '' },
