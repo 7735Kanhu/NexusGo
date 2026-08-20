@@ -2,6 +2,7 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export interface IDeliveryBoy extends Document {
   deliveryBoyId: string;
+  fhrId?: string;
   fullName: string;
   photo?: string;
   phone: string;
@@ -41,6 +42,7 @@ export interface IDeliveryBoy extends Document {
 const DeliveryBoySchema: Schema = new Schema(
   {
     deliveryBoyId: { type: String, required: true, unique: true, trim: true },
+    fhrId: { type: String, default: '', trim: true },
     fullName: { type: String, required: true, trim: true },
     photo: { type: String, default: '' },
     phone: { type: String, required: true, trim: true },

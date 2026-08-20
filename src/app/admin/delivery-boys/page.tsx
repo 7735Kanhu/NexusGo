@@ -164,9 +164,16 @@ export default function DeliveryBoysListPage() {
                             alt={driver.fullName}
                             className="w-9 h-9 rounded-full object-cover border border-slate-200 shadow-sm"
                           />
-                          <span className="font-mono font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded text-[11px]">
-                            {driver.deliveryBoyId}
-                          </span>
+                          <div className="flex flex-col gap-0.5">
+                            <span className="font-mono font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded text-[11px]">
+                              {driver.fhrId ? driver.fhrId : driver.deliveryBoyId}
+                            </span>
+                            {driver.fhrId && driver.fhrId !== driver.deliveryBoyId && (
+                              <span className="font-mono text-[9px] text-slate-400">
+                                {driver.deliveryBoyId}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </td>
                       <td className="py-3 px-4">

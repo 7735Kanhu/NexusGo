@@ -3,14 +3,28 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/AdminLayout';
-import { UserPlus, ArrowLeft, ShieldCheck, CheckCircle2, AlertCircle } from 'lucide-react';
+import {
+  UserPlus,
+  ArrowLeft,
+  ShieldCheck,
+  CheckCircle2,
+  AlertCircle,
+  Upload,
+  Loader2,
+  FileText,
+  Image as ImageIcon,
+  Check,
+} from 'lucide-react';
 
 export default function RegisterDeliveryBoyPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [uploading, setUploading] = useState<{ [key: string]: boolean }>({});
 
   const [formData, setFormData] = useState({
+    deliveryBoyId: '',
+    fhrId: '',
     fullName: '',
     phone: '',
     photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
@@ -27,6 +41,7 @@ export default function RegisterDeliveryBoyPage() {
     driving: {
       licenceNumber: '',
       licenceExpiry: '',
+      licenceDocument: '',
       vehicleNumber: '',
       vehicleType: 'Bike',
     },
@@ -54,6 +69,37 @@ export default function RegisterDeliveryBoyPage() {
           [field]: value,
         },
       }));
+    }
+  };
+
+  const handleFileUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    section: string,
+    field: string
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const uploadKey = `${section}.${field}`;
+    setUploading((prev) => ({ ...prev, [uploadKey]: true }));
+
+    try {
+      const data = new FormData();
+      data.append('file', file);
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: data,
+      });
+
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'File upload failed');
+
+      handleChange(section, field, json.url);
+    } catch (err: any) {
+      alert(`Upload Error: ${err.message || 'Failed to upload file'}`);
+    } finally {
+      setUploading((prev) => ({ ...prev, [uploadKey]: false }));
     }
   };
 
@@ -93,7 +139,7 @@ export default function RegisterDeliveryBoyPage() {
           </button>
           <div>
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Register Delivery Boy</h1>
-            <p className="text-sm text-slate-500">Create new delivery driver profile & financial setup</p>
+            <p className="text-sm text-slate-500">Create driver profile, FHRID, Cloudinary documents & payout setup</p>
           </div>
         </div>
 
@@ -105,12 +151,39 @@ export default function RegisterDeliveryBoyPage() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Section 1: Personal Information */}
+          {/* Section 1: Manual Driver IDs & Personal Info */}
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-            <h3 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-2">
-              1. Personal Information
+            <h3 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-2 flex items-center gap-2">
+              <UserPlus className="w-5 h-5 text-emerald-600" />
+              1. Driver Identifiers & Personal Info
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  FHRID (Manual Delivery Boy ID) *
+                </label>
+                <input
+                  type="text"
+                  value={formData.fhrId}
+                  onChange={(e) => handleChange('root', 'fhrId', e.target.value)}
+                  placeholder="e.g. FHR-101 / FHR-2026-09"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono font-bold text-emerald-800 bg-emerald-50/50"
+                />
+                <span className="text-[10px] text-slate-400">Manual company internal FHR ID number</span>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  System Delivery Boy ID
+                </label>
+                <input
+                  type="text"
+                  value={formData.deliveryBoyId}
+                  onChange={(e) => handleChange('root', 'deliveryBoyId', e.target.value)}
+                  placeholder="Auto-generated if left blank (e.g. DEL-101)"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono"
+                />
+              </div>
+
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Full Name *
@@ -183,28 +256,60 @@ export default function RegisterDeliveryBoyPage() {
                   className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs"
                 />
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Photo URL
+
+              {/* Cloudinary Photo Upload */}
+              <div className="sm:col-span-2 bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+                <label className="block text-xs font-bold text-slate-800">
+                  Driver Photo (Cloudinary Upload)
                 </label>
-                <input
-                  type="text"
-                  value={formData.photo}
-                  onChange={(e) => handleChange('root', 'photo', e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs"
-                />
+                <div className="flex items-center gap-4">
+                  <img
+                    src={formData.photo || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'}
+                    alt="Driver Thumbnail"
+                    className="w-16 h-16 rounded-xl object-cover border-2 border-emerald-500 shadow-sm"
+                  />
+                  <div className="flex-1 space-y-1.5">
+                    <label className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl cursor-pointer transition-all shadow-sm">
+                      {uploading['root.photo'] ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
+                          <span>Uploading to Cloudinary...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-4 h-4 text-emerald-400" />
+                          <span>Upload Photo to Cloudinary</span>
+                        </>
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        disabled={uploading['root.photo']}
+                        onChange={(e) => handleFileUpload(e, 'root', 'photo')}
+                        className="hidden"
+                      />
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.photo}
+                      onChange={(e) => handleChange('root', 'photo', e.target.value)}
+                      placeholder="Or paste image URL directly"
+                      className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-[11px] bg-white"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Section 2: KYC Information */}
+          {/* Section 2: KYC Documents */}
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
             <h3 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-2">
-              2. KYC Documents
+              2. KYC Documents & Cloudinary Uploads
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <div className="space-y-2">
+                <label className="block text-xs font-semibold text-slate-700">
                   Aadhaar Number
                 </label>
                 <input
@@ -214,9 +319,42 @@ export default function RegisterDeliveryBoyPage() {
                   placeholder="12 digit Aadhaar"
                   className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs"
                 />
+
+                {/* Aadhaar Cloudinary Upload */}
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-slate-700">Aadhaar Card Document</span>
+                    {formData.kyc.aadhaarDocument && (
+                      <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
+                        <Check className="w-3 h-3" /> Uploaded
+                      </span>
+                    )}
+                  </div>
+                  <label className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-lg cursor-pointer transition-all w-full justify-center">
+                    {uploading['kyc.aadhaarDocument'] ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-600" />
+                        <span>Uploading...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-3.5 h-3.5 text-slate-500" />
+                        <span>Choose Aadhaar Image / PDF</span>
+                      </>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*,.pdf"
+                      disabled={uploading['kyc.aadhaarDocument']}
+                      onChange={(e) => handleFileUpload(e, 'kyc', 'aadhaarDocument')}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+
+              <div className="space-y-2">
+                <label className="block text-xs font-semibold text-slate-700">
                   PAN Number
                 </label>
                 <input
@@ -226,6 +364,38 @@ export default function RegisterDeliveryBoyPage() {
                   placeholder="10 digit PAN"
                   className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs"
                 />
+
+                {/* PAN Cloudinary Upload */}
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-slate-700">PAN Card Document</span>
+                    {formData.kyc.panDocument && (
+                      <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
+                        <Check className="w-3 h-3" /> Uploaded
+                      </span>
+                    )}
+                  </div>
+                  <label className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-lg cursor-pointer transition-all w-full justify-center">
+                    {uploading['kyc.panDocument'] ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-600" />
+                        <span>Uploading...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-3.5 h-3.5 text-slate-500" />
+                        <span>Choose PAN Image / PDF</span>
+                      </>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*,.pdf"
+                      disabled={uploading['kyc.panDocument']}
+                      onChange={(e) => handleFileUpload(e, 'kyc', 'panDocument')}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
               </div>
             </div>
           </div>
@@ -284,6 +454,38 @@ export default function RegisterDeliveryBoyPage() {
                   placeholder="UP-16-AB-1234"
                   className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs"
                 />
+              </div>
+
+              {/* Driving Licence Cloudinary Upload */}
+              <div className="sm:col-span-2 p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-slate-700">Driving Licence Document Upload</span>
+                  {formData.driving.licenceDocument && (
+                    <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
+                      <Check className="w-3 h-3" /> Licence Document Uploaded
+                    </span>
+                  )}
+                </div>
+                <label className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-lg cursor-pointer transition-all w-full justify-center">
+                  {uploading['driving.licenceDocument'] ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
+                      <span>Uploading Licence to Cloudinary...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4 text-slate-500" />
+                      <span>Choose Licence Image / Document File</span>
+                    </>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*,.pdf"
+                    disabled={uploading['driving.licenceDocument']}
+                    onChange={(e) => handleFileUpload(e, 'driving', 'licenceDocument')}
+                    className="hidden"
+                  />
+                </label>
               </div>
             </div>
           </div>

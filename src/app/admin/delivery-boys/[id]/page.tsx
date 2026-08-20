@@ -87,7 +87,7 @@ export default function DeliveryBoyProfilePage() {
           </button>
           <div>
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-              {driver.fullName} ({driver.deliveryBoyId})
+              {driver.fullName} ({driver.fhrId || driver.deliveryBoyId})
             </h1>
             <p className="text-sm text-slate-500">Delivery Boy 360° Profile & Financial Ledger</p>
           </div>
@@ -102,11 +102,16 @@ export default function DeliveryBoyProfilePage() {
               className="w-20 h-20 rounded-2xl object-cover border-2 border-emerald-500 shadow-md"
             />
             <div className="space-y-1">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-xl font-extrabold text-slate-900">{driver.fullName}</h2>
-                <span className="font-mono text-xs font-bold bg-slate-100 px-2 py-0.5 rounded text-slate-700">
-                  {driver.deliveryBoyId}
+                <span className="font-mono text-xs font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded border border-emerald-200">
+                  FHRID: {driver.fhrId || driver.deliveryBoyId}
                 </span>
+                {driver.fhrId && driver.fhrId !== driver.deliveryBoyId && (
+                  <span className="font-mono text-[11px] font-bold bg-slate-100 px-2 py-0.5 rounded text-slate-600">
+                    ID: {driver.deliveryBoyId}
+                  </span>
+                )}
                 <span
                   className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
                     driver.status === 'ACTIVE'

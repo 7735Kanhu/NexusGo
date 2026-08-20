@@ -116,6 +116,7 @@ export async function POST(req: NextRequest) {
     const newDriver = await DeliveryBoy.create({
       ...body,
       deliveryBoyId,
+      fhrId: body.fhrId || body.deliveryBoyId || deliveryBoyId,
       joiningDate: body.joiningDate || new Date().toISOString().split('T')[0],
       defaultCommission: body.defaultCommission || 13,
       status: body.status || 'ACTIVE',
