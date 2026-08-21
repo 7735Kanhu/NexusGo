@@ -119,6 +119,15 @@ export default function RegisterDeliveryBoyPage() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || 'Failed to register delivery boy');
 
+      const empId = json.driver?.fhrId || json.driver?.deliveryBoyId;
+      if (json.emailStatus?.sent) {
+        alert(
+          `✅ Registration Successful!\n\nDriver ${json.driver.fullName} registered with Employee ID (FHRID): ${empId}.\nAn official welcome email has been sent to ${json.driver.email}.`
+        );
+      } else {
+        alert(`✅ Registration Successful!\n\nDriver ${json.driver.fullName} registered with Employee ID (FHRID): ${empId}.`);
+      }
+
       router.push('/admin/delivery-boys');
     } catch (err: any) {
       setError(err.message || 'Registration failed');

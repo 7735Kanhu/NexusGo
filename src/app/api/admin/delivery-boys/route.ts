@@ -108,16 +108,27 @@ export async function POST(req: NextRequest) {
       deliveryBoyId = `DEL-${101 + count}`;
     }
 
+    // Auto-generate fhrId if not provided
+    let fhrId = body.fhrId;
+    if (!fhrId) {
+      fhrId = `FHR-${deliveryBoyId.replace('DEL-', '')}`;
+    }
+
     // Check duplicate ID
-    const existing = await DeliveryBoy.findOne({ deliveryBoyId });
+    const existing = await DeliveryBoy.findOne({
+      $or: [{ deliveryBoyId }, { fhrId }],
+    });
     if (existing) {
-      return NextResponse.json({ error: `Delivery Boy ID ${deliveryBoyId} already exists` }, { status: 400 });
+      return NextResponse.json(
+        { error: `Delivery Boy ID (${deliveryBoyId}) or FHRID (${fhrId}) already exists` },
+        { status: 400 }
+      );
     }
 
     const newDriver = await DeliveryBoy.create({
       ...body,
       deliveryBoyId,
-      fhrId: body.fhrId || body.deliveryBoyId || deliveryBoyId,
+      fhrId,
       joiningDate: body.joiningDate || new Date().toISOString().split('T')[0],
       defaultCommission: body.defaultCommission || 13,
       status: body.status || 'ACTIVE',
@@ -125,7 +136,7 @@ export async function POST(req: NextRequest) {
 
     await logAudit({
       action: 'CREATE_DELIVERY_BOY',
-      details: `Registered new delivery boy ${newDriver.fullName} (ID: ${newDriver.deliveryBoyId})`,
+      details: `Registered new delivery boy ${newDriver.fullName} (Employee FHRID: ${newDriver.fhrId}, System ID: ${newDriver.deliveryBoyId})`,
       newValue: newDriver.toObject(),
     });
 

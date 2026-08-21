@@ -43,8 +43,8 @@ export async function sendDriverWelcomeEmail(params: SendWelcomeEmailParams) {
         <meta charset="utf-8">
         <style>
           body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 20px; }
-          .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-          .header { bg-color: #059669; background: linear-gradient(135deg, #10b981, #047857); padding: 32px 24px; text-align: center; color: #ffffff; }
+          .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+          .header { background: linear-gradient(135deg, #10b981, #047857); padding: 32px 24px; text-align: center; color: #ffffff; }
           .header h1 { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }
           .header p { margin: 6px 0 0 0; opacity: 0.9; font-size: 14px; }
           .content { padding: 28px 24px; }
@@ -53,34 +53,38 @@ export async function sendDriverWelcomeEmail(params: SendWelcomeEmailParams) {
           .detail-label { color: #64748b; font-weight: 600; }
           .detail-val { color: #0f172a; font-weight: 700; }
           .footer { background: #f8fafc; padding: 20px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; }
-          .badge { display: inline-block; background: #d1fae5; color: #065f46; font-weight: 700; padding: 4px 12px; border-radius: 9999px; font-size: 12px; }
+          .badge { display: inline-block; background: #d1fae5; color: #065f46; font-weight: 800; padding: 6px 16px; border-radius: 9999px; font-size: 14px; }
         </style>
       </head>
       <body>
         <div class="container">
           <div class="header">
             <h1>🚚 Welcome to NexusGo Logistics!</h1>
-            <p>Official Delivery Driver Registration Confirmation</p>
+            <p>Official Delivery Driver Employee Registration Confirmation</p>
           </div>
           <div class="content">
             <p>Hello <strong>${driverName}</strong>,</p>
             <p>Congratulations! You have been successfully registered as an official Delivery Partner at <strong>NexusGo Logistics Business Management System</strong>.</p>
             
             <div class="card">
-              <div style="text-align: center; margin-bottom: 14px;">
-                <span class="badge">FHRID: ${effectiveId}</span>
+              <div style="text-align: center; margin-bottom: 16px;">
+                <span class="badge">Employee ID (FHRID): ${effectiveId}</span>
               </div>
               <div class="detail-row">
                 <span class="detail-label">Driver Name:</span>
                 <span class="detail-val">${driverName}</span>
               </div>
               <div class="detail-row">
-                <span class="detail-label">Mobile Phone:</span>
-                <span class="detail-val">+91 ${phone}</span>
+                <span class="detail-label">Employee ID (FHRID):</span>
+                <span class="detail-val" style="color: #047857; font-weight: 800;">${effectiveId}</span>
               </div>
               <div class="detail-row">
-                <span class="detail-label">System ID:</span>
+                <span class="detail-label">System Driver ID:</span>
                 <span class="detail-val">${deliveryBoyId}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Mobile Phone:</span>
+                <span class="detail-val">+91 ${phone}</span>
               </div>
               <div class="detail-row">
                 <span class="detail-label">Joining Date:</span>
@@ -92,7 +96,7 @@ export async function sendDriverWelcomeEmail(params: SendWelcomeEmailParams) {
               </div>
             </div>
 
-            <p>Please report to the central Noida Logistics Hub for operational guidelines and route assignment.</p>
+            <p>Please report to the central Noida Logistics Hub for operational guidelines and route assignment. Always quote your <strong>Employee ID (${effectiveId})</strong> for attendance and payout verification.</p>
             <p style="font-size: 13px; color: #64748b; margin-top: 20px;">
               If you have any questions regarding your registration or payouts, please contact your logistics manager.
             </p>
@@ -122,7 +126,7 @@ export async function sendDriverWelcomeEmail(params: SendWelcomeEmailParams) {
       await transporter.sendMail({
         from: `"NexusGo Logistics" <${user}>`,
         to: driverEmail,
-        subject: `Welcome to NexusGo Logistics! Your Driver ID: ${effectiveId}`,
+        subject: `Welcome to NexusGo Logistics! Your Employee ID (FHRID): ${effectiveId}`,
         html: htmlContent,
       });
 
