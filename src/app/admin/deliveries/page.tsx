@@ -33,17 +33,10 @@ export default function DeliveriesPage() {
   // Add Single Delivery Modal
   const [showAddModal, setShowAddModal] = useState(false);
   const [newParcel, setNewParcel] = useState({
-    parcelId: '',
     deliveryBoyId: '',
     date: new Date().toISOString().split('T')[0],
-    customerName: '',
-    customerPhone: '',
-    address: '',
-    area: 'Noida Sector 62',
-    pincode: '201301',
-    codAmount: 0,
-    status: 'SUCCESSFUL',
-    remarks: '',
+    successCount: 0,
+    rejectCount: 0,
   });
 
   // Bulk Import Modal
@@ -92,36 +85,111 @@ export default function DeliveriesPage() {
     fetchDeliveries();
   }, [statusFilter, dateFilter, driverFilter]);
 
+  const groupedDeliveries = React.useMemo(() => {
+    const map = new Map<string, {
+      key: string;
+      driverName: string;
+      driverCode: string;
+      date: string;
+      successCount: number;
+      failedCount: number;
+      totalCompanyRate: number;
+      totalDriverCommission: number;
+      totalGrossMargin: number;
+    }>();
+
+    deliveries.forEach((d) => {
+      const driverObj = typeof d.deliveryBoyId === 'object' ? d.deliveryBoyId : null;
+      const driverId = driverObj?._id || d.deliveryBoyId || 'unassigned';
+      const driverName = driverObj?.fullName || (driverId === 'unassigned' ? 'Unassigned' : 'Driver');
+      const driverCode = driverObj?.deliveryBoyId || '-';
+      const dateStr = d.date || '';
+      const key = `${driverId}_${dateStr}`;
+
+      if (!map.has(key)) {
+        map.set(key, {
+          key,
+          driverName,
+          driverCode,
+          date: dateStr,
+          successCount: 0,
+          failedCount: 0,
+          totalCompanyRate: 0,
+          totalDriverCommission: 0,
+          totalGrossMargin: 0,
+        });
+      }
+
+      const item = map.get(key)!;
+      if (d.status === 'SUCCESSFUL') {
+        item.successCount += 1;
+        item.totalCompanyRate += Number(d.companyRate || 0);
+        item.totalDriverCommission += Number(d.driverCommission || 0);
+        item.totalGrossMargin += Number(d.grossMargin || 0);
+      } else {
+        item.failedCount += 1;
+      }
+    });
+
+    return Array.from(map.values());
+  }, [deliveries]);
+
   const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setModalError('');
+
+    const successNum = Number(newParcel.successCount || 0);
+    const rejectNum = Number(newParcel.rejectCount || 0);
+
+    if (successNum <= 0 && rejectNum <= 0) {
+      setModalError('Please enter at least 1 successful or reject/return delivery count.');
+      return;
+    }
+
     try {
-      const res = await fetch('/api/admin/deliveries', {
+      const rows: any[] = [];
+      const timestamp = Date.now();
+
+      for (let i = 0; i < successNum; i++) {
+        rows.push({
+          parcelId: `NX-SUC-${timestamp}-${i + 1}`,
+          deliveryBoyId: newParcel.deliveryBoyId,
+          date: newParcel.date,
+          status: 'SUCCESSFUL',
+        });
+      }
+
+      for (let j = 0; j < rejectNum; j++) {
+        rows.push({
+          parcelId: `NX-REJ-${timestamp}-${j + 1}`,
+          deliveryBoyId: newParcel.deliveryBoyId,
+          date: newParcel.date,
+          status: 'FAILED',
+        });
+      }
+
+      const res = await fetch('/api/admin/deliveries/bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newParcel),
+        body: JSON.stringify({
+          action: 'CONFIRM_IMPORT',
+          rows,
+        }),
       });
 
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Failed to add delivery');
+      if (!res.ok) throw new Error(json.error || 'Failed to save delivery records');
 
       setShowAddModal(false);
       setNewParcel({
-        parcelId: '',
         deliveryBoyId: '',
         date: new Date().toISOString().split('T')[0],
-        customerName: '',
-        customerPhone: '',
-        address: '',
-        area: 'Noida Sector 62',
-        pincode: '201301',
-        codAmount: 0,
-        status: 'SUCCESSFUL',
-        remarks: '',
+        successCount: 0,
+        rejectCount: 0,
       });
       fetchDeliveries();
     } catch (err: any) {
-      setModalError(err.message || 'Error adding delivery');
+      setModalError(err.message || 'Error saving delivery records');
     }
   };
 
@@ -266,7 +334,7 @@ export default function DeliveriesPage() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search Parcel ID, Customer, Area..."
+                placeholder="Search Driver Name, Code..."
                 className="w-full pl-9 pr-3 py-1.5 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-emerald-500"
               />
             </div>
@@ -277,7 +345,7 @@ export default function DeliveriesPage() {
         <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden text-xs">
           {loading ? (
             <div className="p-8 text-center text-slate-400">Loading deliveries list...</div>
-          ) : deliveries.length === 0 ? (
+          ) : groupedDeliveries.length === 0 ? (
             <div className="p-12 text-center space-y-2">
               <PackageCheck className="w-10 h-10 text-slate-300 mx-auto" />
               <p className="font-bold text-slate-700">No Deliveries Found</p>
@@ -288,71 +356,51 @@ export default function DeliveriesPage() {
               <table className="w-full text-left">
                 <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider">
                   <tr>
-                    <th className="py-3 px-4">Parcel ID</th>
-                    <th className="py-3 px-4">Date</th>
                     <th className="py-3 px-4">Assigned Driver</th>
-                    <th className="py-3 px-4">Customer & Area</th>
-                    <th className="py-3 px-4">COD Amount</th>
-                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4">Date</th>
+                    <th className="py-3 px-4 text-emerald-800">Success Deliveries</th>
+                    <th className="py-3 px-4 text-rose-800">Failed / Return Deliveries</th>
                     <th className="py-3 px-4">Company Rate</th>
                     <th className="py-3 px-4">Driver Comm.</th>
                     <th className="py-3 px-4">Gross Margin</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                  {deliveries.map((d) => {
-                    const isSuccess = d.status === 'SUCCESSFUL';
-                    return (
-                      <tr key={d._id} className="hover:bg-slate-50/80">
-                        <td className="py-3 px-4 font-mono font-bold text-slate-900">{d.parcelId}</td>
-                        <td className="py-3 px-4 text-slate-500">{formatDate(d.date)}</td>
-                        <td className="py-3 px-4">
-                          <span className="font-bold text-slate-900 block">
-                            {d.deliveryBoyId?.fullName || 'Unassigned'}
-                          </span>
-                          <span className="text-[10px] text-slate-400 font-mono">
-                            {d.deliveryBoyId?.deliveryBoyId || '-'}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className="font-semibold text-slate-900 block">{d.customerName || 'Customer'}</span>
-                          <span className="text-[10px] text-slate-400 block">{d.area || '-'}</span>
-                        </td>
-                        <td className="py-3 px-4 font-bold text-slate-900">
-                          {d.codAmount > 0 ? formatCurrency(d.codAmount) : '-'}
-                        </td>
-                        <td className="py-3 px-4">
-                          <span
-                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                              d.status === 'SUCCESSFUL'
-                                ? 'bg-emerald-100 text-emerald-800'
-                                : d.status === 'FAILED'
-                                ? 'bg-rose-100 text-rose-800'
-                                : 'bg-amber-100 text-amber-800'
-                            }`}
-                          >
-                            {d.status}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 font-bold text-slate-900">
-                          {isSuccess ? formatCurrency(d.companyRate) : '₹0'}
-                        </td>
-                        <td className="py-3 px-4 font-bold text-indigo-700">
-                          {isSuccess ? formatCurrency(d.driverCommission) : '₹0'}
-                        </td>
-                        <td className="py-3 px-4 font-bold text-emerald-700">
-                          {isSuccess ? formatCurrency(d.grossMargin) : '₹0'}
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {groupedDeliveries.map((item) => (
+                    <tr key={item.key} className="hover:bg-slate-50/80">
+                      <td className="py-3 px-4">
+                        <span className="font-bold text-slate-900 block">{item.driverName}</span>
+                        <span className="text-[10px] text-slate-400 font-mono">{item.driverCode}</span>
+                      </td>
+                      <td className="py-3 px-4 text-slate-500">{formatDate(item.date)}</td>
+                      <td className="py-3 px-4">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
+                          {item.successCount}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800">
+                          {item.failedCount}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 font-bold text-slate-900">
+                        {formatCurrency(item.totalCompanyRate)}
+                      </td>
+                      <td className="py-3 px-4 font-bold text-indigo-700">
+                        {formatCurrency(item.totalDriverCommission)}
+                      </td>
+                      <td className="py-3 px-4 font-bold text-emerald-700">
+                        {formatCurrency(item.totalGrossMargin)}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
           )}
         </div>
 
-        {/* MODAL 1: ADD SINGLE DELIVERY */}
+        {/* MODAL 1: ADD DELIVERY RECORD */}
         {showAddModal && (
           <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
@@ -370,18 +418,6 @@ export default function DeliveriesPage() {
               )}
 
               <form onSubmit={handleAddSubmit} className="space-y-3 text-xs">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Parcel ID (Unique) *</label>
-                  <input
-                    type="text"
-                    required
-                    value={newParcel.parcelId}
-                    onChange={(e) => setNewParcel({ ...newParcel, parcelId: e.target.value })}
-                    placeholder="e.g. NX-PARCEL-9988"
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl font-mono font-bold"
-                  />
-                </div>
-
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block font-semibold text-slate-700 mb-1">Assign Delivery Boy</label>
@@ -411,46 +447,29 @@ export default function DeliveriesPage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Customer Name</label>
-                    <input
-                      type="text"
-                      value={newParcel.customerName}
-                      onChange={(e) => setNewParcel({ ...newParcel, customerName: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-xl"
-                    />
-                  </div>
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Customer Phone</label>
-                    <input
-                      type="text"
-                      value={newParcel.customerPhone}
-                      onChange={(e) => setNewParcel({ ...newParcel, customerPhone: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-xl"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Status</label>
-                    <select
-                      value={newParcel.status}
-                      onChange={(e) => setNewParcel({ ...newParcel, status: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-xl font-bold"
-                    >
-                      <option value="SUCCESSFUL">SUCCESSFUL (₹18 / ₹13)</option>
-                      <option value="FAILED">FAILED (₹0 Commission)</option>
-                      <option value="REATTEMPT">REATTEMPT</option>
-                      <option value="ASSIGNED">ASSIGNED</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">COD Amount (₹)</label>
+                    <label className="block font-semibold text-slate-700 mb-1">Success Delivery Number</label>
                     <input
                       type="number"
-                      value={newParcel.codAmount}
-                      onChange={(e) => setNewParcel({ ...newParcel, codAmount: Number(e.target.value) })}
+                      min="0"
+                      value={newParcel.successCount}
+                      onChange={(e) =>
+                        setNewParcel({ ...newParcel, successCount: Math.max(0, parseInt(e.target.value) || 0) })
+                      }
                       className="w-full px-3 py-2 border border-slate-200 rounded-xl font-bold"
+                      placeholder="0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Reject / Return Delivery Number</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={newParcel.rejectCount}
+                      onChange={(e) =>
+                        setNewParcel({ ...newParcel, rejectCount: Math.max(0, parseInt(e.target.value) || 0) })
+                      }
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl font-bold"
+                      placeholder="0"
                     />
                   </div>
                 </div>

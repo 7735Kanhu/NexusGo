@@ -22,7 +22,8 @@ export async function POST(req: NextRequest) {
     const allDrivers = await DeliveryBoy.find({});
     const driverMap = new Map<string, any>();
     allDrivers.forEach((d) => {
-      driverMap.set(d.deliveryBoyId.toUpperCase(), d._id);
+      if (d.deliveryBoyId) driverMap.set(d.deliveryBoyId.toUpperCase(), d._id);
+      if (d._id) driverMap.set(d._id.toString().toUpperCase(), d._id);
     });
 
     // Fetch existing parcel IDs in database
