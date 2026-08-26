@@ -46,6 +46,11 @@ export default function DeliveriesPage() {
   const [bulkLoading, setBulkLoading] = useState(false);
   const [modalError, setModalError] = useState('');
 
+  const [settings, setSettings] = useState<{ companyRate: number; driverCommission: number }>({
+    companyRate: 18,
+    driverCommission: 13,
+  });
+
   const fetchDeliveries = async () => {
     try {
       setLoading(true);
@@ -77,8 +82,24 @@ export default function DeliveriesPage() {
     }
   };
 
+  const fetchSettings = async () => {
+    try {
+      const res = await fetch('/api/admin/settings');
+      const json = await res.json();
+      if (res.ok && json.setting) {
+        setSettings({
+          companyRate: json.setting.companyRate || 18,
+          driverCommission: json.setting.driverCommission || 13,
+        });
+      }
+    } catch (err) {
+      console.error('Fetch settings error:', err);
+    }
+  };
+
   useEffect(() => {
     fetchDrivers();
+    fetchSettings();
   }, []);
 
   useEffect(() => {
@@ -93,6 +114,7 @@ export default function DeliveriesPage() {
       date: string;
       successCount: number;
       failedCount: number;
+      totalCount: number;
       totalCompanyRate: number;
       totalDriverCommission: number;
       totalGrossMargin: number;
@@ -114,6 +136,7 @@ export default function DeliveriesPage() {
           date: dateStr,
           successCount: 0,
           failedCount: 0,
+          totalCount: 0,
           totalCompanyRate: 0,
           totalDriverCommission: 0,
           totalGrossMargin: 0,
@@ -129,6 +152,7 @@ export default function DeliveriesPage() {
       } else {
         item.failedCount += 1;
       }
+      item.totalCount = item.successCount + item.failedCount;
     });
 
     return Array.from(map.values());
@@ -264,7 +288,7 @@ export default function DeliveriesPage() {
           <div>
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Deliveries Management</h1>
             <p className="text-sm text-slate-500">
-              Track single parcels, COD amounts, rates (₹18 / ₹13) & bulk CSV upload
+              Track success & failed parcel counts, calculated company rates, driver commissions & bulk upload
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -280,7 +304,7 @@ export default function DeliveriesPage() {
               className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-600/30 flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
-              <span>Add Single Delivery</span>
+              <span>Add Delivery Entry</span>
             </button>
           </div>
         </div>
@@ -358,6 +382,7 @@ export default function DeliveriesPage() {
                   <tr>
                     <th className="py-3 px-4">Assigned Driver</th>
                     <th className="py-3 px-4">Date</th>
+                    <th className="py-3 px-4 text-slate-800">Total Parcels</th>
                     <th className="py-3 px-4 text-emerald-800">Success Deliveries</th>
                     <th className="py-3 px-4 text-rose-800">Failed / Return Deliveries</th>
                     <th className="py-3 px-4">Company Rate</th>
@@ -373,6 +398,11 @@ export default function DeliveriesPage() {
                         <span className="text-[10px] text-slate-400 font-mono">{item.driverCode}</span>
                       </td>
                       <td className="py-3 px-4 text-slate-500">{formatDate(item.date)}</td>
+                      <td className="py-3 px-4">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-800 border border-slate-200">
+                          {item.totalCount || item.successCount + item.failedCount}
+                        </span>
+                      </td>
                       <td className="py-3 px-4">
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
                           {item.successCount}
@@ -405,7 +435,10 @@ export default function DeliveriesPage() {
           <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <h3 className="font-bold text-slate-900 text-base">Add Single Delivery Parcel</h3>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-base">Add Daily Delivery Record</h3>
+                  <p className="text-xs text-slate-500">Record success & failed counts per driver without single parcel IDs</p>
+                </div>
                 <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-600">
                   <X className="w-5 h-5" />
                 </button>
@@ -417,19 +450,19 @@ export default function DeliveriesPage() {
                 </div>
               )}
 
-              <form onSubmit={handleAddSubmit} className="space-y-3 text-xs">
+              <form onSubmit={handleAddSubmit} className="space-y-4 text-xs">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block font-semibold text-slate-700 mb-1">Assign Delivery Boy</label>
                     <select
                       value={newParcel.deliveryBoyId}
                       onChange={(e) => setNewParcel({ ...newParcel, deliveryBoyId: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-xl"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:outline-none focus:border-emerald-500 font-medium"
                     >
                       <option value="">Select Driver</option>
                       {drivers.map((d) => (
                         <option key={d._id} value={d._id}>
-                          {d.fullName} ({d.deliveryBoyId})
+                          {d.fullName} ({d.deliveryBoyId}) — ₹{d.defaultCommission ?? 13}/parcel
                         </option>
                       ))}
                     </select>
@@ -440,7 +473,7 @@ export default function DeliveriesPage() {
                       type="date"
                       value={newParcel.date}
                       onChange={(e) => setNewParcel({ ...newParcel, date: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-xl"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:outline-none focus:border-emerald-500 font-medium"
                     />
                   </div>
                 </div>
@@ -455,7 +488,7 @@ export default function DeliveriesPage() {
                       onChange={(e) =>
                         setNewParcel({ ...newParcel, successCount: Math.max(0, parseInt(e.target.value) || 0) })
                       }
-                      className="w-full px-3 py-2 border border-slate-200 rounded-xl font-bold"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl font-bold text-emerald-700 focus:outline-none focus:border-emerald-500"
                       placeholder="0"
                     />
                   </div>
@@ -468,15 +501,75 @@ export default function DeliveriesPage() {
                       onChange={(e) =>
                         setNewParcel({ ...newParcel, rejectCount: Math.max(0, parseInt(e.target.value) || 0) })
                       }
-                      className="w-full px-3 py-2 border border-slate-200 rounded-xl font-bold"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl font-bold text-rose-700 focus:outline-none focus:border-emerald-500"
                       placeholder="0"
                     />
                   </div>
                 </div>
 
+                {/* Calculation Summary Preview Card */}
+                {(() => {
+                  const selDriver = drivers.find((d) => d._id === newParcel.deliveryBoyId);
+                  const activeDriverComm = selDriver?.defaultCommission !== undefined && selDriver?.defaultCommission !== null
+                    ? Number(selDriver.defaultCommission)
+                    : Number(settings.driverCommission || 13);
+                  const successNum = Number(newParcel.successCount || 0);
+
+                  return (
+                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                      <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                        <span className="font-bold text-slate-800">Calculated Deliveries & Revenue Summary</span>
+                        <span className="text-[11px] font-mono text-slate-500">Live Preview</span>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                        <div className="p-2 bg-white rounded-lg border border-slate-200 shadow-sm">
+                          <span className="text-slate-500 block text-[10px] uppercase font-bold">Total Parcels</span>
+                          <strong className="text-slate-900 text-sm">
+                            {successNum + Number(newParcel.rejectCount || 0)}
+                          </strong>
+                        </div>
+                        <div className="p-2 bg-emerald-50 rounded-lg border border-emerald-200 shadow-sm">
+                          <span className="text-emerald-700 block text-[10px] uppercase font-bold">Success</span>
+                          <strong className="text-emerald-700 text-sm">{successNum}</strong>
+                        </div>
+                        <div className="p-2 bg-rose-50 rounded-lg border border-rose-200 shadow-sm">
+                          <span className="text-rose-700 block text-[10px] uppercase font-bold">Failed / Return</span>
+                          <strong className="text-rose-700 text-sm">{newParcel.rejectCount || 0}</strong>
+                        </div>
+                      </div>
+
+                      <div className="pt-1 space-y-1.5 text-[11px]">
+                        <div className="flex justify-between items-center text-slate-600">
+                          <span>Company Revenue Rate (₹{settings.companyRate || 18} / parcel):</span>
+                          <strong className="text-slate-900 font-semibold">
+                            {formatCurrency(successNum * (settings.companyRate || 18))}
+                          </strong>
+                        </div>
+                        <div className="flex justify-between items-center text-slate-600">
+                          <span>
+                            Driver Commission ({selDriver ? selDriver.fullName : 'Driver'}: ₹{activeDriverComm} / parcel):
+                          </span>
+                          <strong className="text-indigo-700 font-semibold">
+                            {formatCurrency(successNum * activeDriverComm)}
+                          </strong>
+                        </div>
+                        <div className="flex justify-between items-center text-slate-900 font-bold border-t border-slate-200 pt-1.5 text-xs">
+                          <span>Estimated Gross Margin:</span>
+                          <strong className="text-emerald-700">
+                            {formatCurrency(
+                              successNum * ((settings.companyRate || 18) - activeDriverComm)
+                            )}
+                          </strong>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 <button
                   type="submit"
-                  className="w-full py-2.5 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-500 shadow-md shadow-emerald-600/30"
+                  className="w-full py-2.5 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-500 shadow-md shadow-emerald-600/30 transition-all text-xs"
                 >
                   Save Parcel Delivery Record
                 </button>

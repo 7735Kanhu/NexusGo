@@ -22,8 +22,8 @@ export async function POST(req: NextRequest) {
     const allDrivers = await DeliveryBoy.find({});
     const driverMap = new Map<string, any>();
     allDrivers.forEach((d) => {
-      if (d.deliveryBoyId) driverMap.set(d.deliveryBoyId.toUpperCase(), d._id);
-      if (d._id) driverMap.set(d._id.toString().toUpperCase(), d._id);
+      if (d.deliveryBoyId) driverMap.set(d.deliveryBoyId.toUpperCase(), d);
+      if (d._id) driverMap.set(d._id.toString().toUpperCase(), d);
     });
 
     // Fetch existing parcel IDs in database
@@ -42,7 +42,10 @@ export async function POST(req: NextRequest) {
 
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
-      const parcelId = String(r.parcelId || r['Parcel ID'] || r.ParcelID || '').trim().toUpperCase();
+      let parcelId = String(r.parcelId || r['Parcel ID'] || r.ParcelID || '').trim().toUpperCase();
+      if (!parcelId) {
+        parcelId = `NX-AUTO-${Date.now()}-${i + 1}-${Math.floor(100 + Math.random() * 900)}`;
+      }
       const driverId = String(r.deliveryBoyId || r['Delivery Boy ID'] || r.DriverID || '').trim().toUpperCase();
       const statusRaw = String(r.status || r['Status'] || 'SUCCESSFUL').trim().toUpperCase();
       const status = ['ASSIGNED', 'OUT_FOR_DELIVERY', 'SUCCESSFUL', 'FAILED', 'REATTEMPT'].includes(statusRaw)
@@ -52,11 +55,7 @@ export async function POST(req: NextRequest) {
       let isValid = true;
       let errorReason = '';
 
-      if (!parcelId) {
-        isValid = false;
-        errorReason = 'Missing Parcel ID';
-        invalidCount++;
-      } else if (existingParcelSet.has(parcelId) || seenInFileSet.has(parcelId)) {
+      if (existingParcelSet.has(parcelId) || seenInFileSet.has(parcelId)) {
         isValid = false;
         errorReason = 'Duplicate Parcel ID';
         duplicateCount++;
@@ -66,11 +65,15 @@ export async function POST(req: NextRequest) {
         seenInFileSet.add(parcelId);
       }
 
-      const driverMongoId = driverMap.get(driverId) || null;
+      const driverObj = driverMap.get(driverId) || null;
+      const driverMongoId = driverObj?._id || null;
+      const driverCommRate = driverObj?.defaultCommission !== undefined && driverObj?.defaultCommission !== null
+        ? Number(driverObj.defaultCommission)
+        : driverCommission;
 
       const isSuccessful = status === 'SUCCESSFUL';
       const fCompanyRate = isSuccessful ? companyRate : 0;
-      const fDriverComm = isSuccessful ? driverCommission : 0;
+      const fDriverComm = isSuccessful ? driverCommRate : 0;
       const fGrossMargin = isSuccessful ? (fCompanyRate - fDriverComm) : 0;
 
       if (isValid) {

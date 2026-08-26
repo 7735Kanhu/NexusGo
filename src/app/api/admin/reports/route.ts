@@ -34,11 +34,48 @@ export async function GET(req: NextRequest) {
       const totalRevenue = successfulCount * companyRate;
       const totalCommission = successfulCount * driverCommRate;
 
+      // Group deliveries by driver & date for clean daily summary report
+      const map = new Map<string, any>();
+      deliveries.forEach((d: any) => {
+        const driverObj = typeof d.deliveryBoyId === 'object' ? d.deliveryBoyId : null;
+        const driverName = driverObj?.fullName || 'Unassigned';
+        const driverCode = driverObj?.deliveryBoyId || '-';
+        const dateStr = d.date || '';
+        const key = `${driverName}_${dateStr}`;
+
+        if (!map.has(key)) {
+          map.set(key, {
+            driverName,
+            driverCode,
+            date: dateStr,
+            totalParcels: 0,
+            successDeliveries: 0,
+            failedDeliveries: 0,
+            companyRevenue: 0,
+            driverCommission: 0,
+            grossMargin: 0,
+          });
+        }
+
+        const item = map.get(key);
+        if (d.status === 'SUCCESSFUL') {
+          item.successDeliveries += 1;
+          item.companyRevenue += Number(d.companyRate || companyRate);
+          item.driverCommission += Number(d.driverCommission || driverCommRate);
+          item.grossMargin += Number(d.grossMargin || (companyRate - driverCommRate));
+        } else {
+          item.failedDeliveries += 1;
+        }
+        item.totalParcels = item.successDeliveries + item.failedDeliveries;
+      });
+
+      const reportDataRows = Array.from(map.values());
+
       return NextResponse.json({
         success: true,
         type: 'DELIVERY',
         summary: { totalCount, successfulCount, failedCount, totalRevenue, totalCommission },
-        data: deliveries,
+        data: reportDataRows,
       });
     }
 
@@ -86,11 +123,21 @@ export async function GET(req: NextRequest) {
       const expenses = await Expense.find(query).populate('relatedDeliveryBoyId', 'fullName deliveryBoyId').sort({ date: -1 });
       const totalAmount = expenses.reduce((acc, e) => acc + (e.amount || 0), 0);
 
+      const formattedExpenses = expenses.map((e: any) => ({
+        date: e.date || '',
+        category: e.category || 'General',
+        title: e.title || '',
+        driverName: e.relatedDeliveryBoyId?.fullName || '-',
+        amount: e.amount || 0,
+        paymentStatus: e.paymentStatus || 'PAID',
+        notes: e.notes || '',
+      }));
+
       return NextResponse.json({
         success: true,
         type: 'EXPENSE',
         summary: { totalAmount },
-        data: expenses,
+        data: formattedExpenses,
       });
     }
 

@@ -51,6 +51,57 @@ export default function ReportsPage() {
     document.body.removeChild(link);
   };
 
+  const renderCellValue = (key: string, val: any) => {
+    if (val === null || val === undefined) return '-';
+
+    const k = key.toLowerCase();
+    if (typeof val === 'number') {
+      if (
+        k.includes('revenue') ||
+        k.includes('commission') ||
+        k.includes('margin') ||
+        k.includes('amount') ||
+        k.includes('profit') ||
+        k.includes('expense') ||
+        k.includes('advances')
+      ) {
+        return <span className="font-bold text-slate-900">{formatCurrency(val)}</span>;
+      }
+      if (k.includes('rate') || k.includes('percentage')) {
+        return <span className="font-bold text-emerald-700">{val}%</span>;
+      }
+      if (
+        k.includes('success') ||
+        k.includes('failed') ||
+        k.includes('total') ||
+        k.includes('parcels') ||
+        k.includes('count') ||
+        k.includes('monthly')
+      ) {
+        return (
+          <span
+            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
+              k.includes('success')
+                ? 'bg-emerald-100 text-emerald-800'
+                : k.includes('failed')
+                ? 'bg-rose-100 text-rose-800'
+                : 'bg-slate-100 text-slate-800 border border-slate-200'
+            }`}
+          >
+            {val}
+          </span>
+        );
+      }
+      return val;
+    }
+
+    if (typeof val === 'object') {
+      return val.fullName || val.deliveryBoyId || JSON.stringify(val);
+    }
+
+    return String(val);
+  };
+
   return (
     <AdminLayout>
       <div className="space-y-6 pb-12">
@@ -121,7 +172,7 @@ export default function ReportsPage() {
                 <div key={k} className="p-3 bg-emerald-950/60 rounded-xl border border-emerald-800">
                   <span className="text-emerald-300 block font-medium capitalize">{k.replace(/([A-Z])/g, ' $1')}</span>
                   <strong className="text-lg text-white">
-                    {typeof v === 'number' && k.toLowerCase().includes('profit') || k.toLowerCase().includes('revenue') || k.toLowerCase().includes('amount') || k.toLowerCase().includes('commission') || k.toLowerCase().includes('expense') || k.toLowerCase().includes('margin')
+                    {typeof v === 'number' && (k.toLowerCase().includes('profit') || k.toLowerCase().includes('revenue') || k.toLowerCase().includes('amount') || k.toLowerCase().includes('commission') || k.toLowerCase().includes('expense') || k.toLowerCase().includes('margin'))
                       ? formatCurrency(v)
                       : String(v)}
                   </strong>
@@ -142,23 +193,28 @@ export default function ReportsPage() {
               <table className="w-full text-left">
                 <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider">
                   <tr>
-                    {Object.keys(reportData.data[0]).slice(0, 7).map((h) => (
-                      <th key={h} className="py-3 px-4 capitalize">
-                        {h.replace(/([A-Z])/g, ' $1')}
-                      </th>
-                    ))}
+                    {Object.keys(reportData.data[0])
+                      .filter((h) => !['_id', '__v', 'createdAt', 'updatedAt'].includes(h))
+                      .map((h) => (
+                        <th key={h} className="py-3 px-4 capitalize font-bold text-slate-700">
+                          {h.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ')}
+                        </th>
+                      ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                  {reportData.data.map((row: any, idx: number) => (
-                    <tr key={idx} className="hover:bg-slate-50">
-                      {Object.values(row).slice(0, 7).map((val: any, vIdx: number) => (
-                        <td key={vIdx} className="py-3 px-4">
-                          {typeof val === 'object' && val !== null ? val.fullName || val.deliveryBoyId || JSON.stringify(val) : String(val)}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
+                  {reportData.data.map((row: any, idx: number) => {
+                    const keys = Object.keys(row).filter((h) => !['_id', '__v', 'createdAt', 'updatedAt'].includes(h));
+                    return (
+                      <tr key={idx} className="hover:bg-slate-50">
+                        {keys.map((key: string, vIdx: number) => (
+                          <td key={vIdx} className="py-3 px-4 font-medium">
+                            {renderCellValue(key, row[key])}
+                          </td>
+                        ))}
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

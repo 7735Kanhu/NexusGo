@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { Delivery } from '@/lib/models/Delivery';
+import { DeliveryBoy } from '@/lib/models/DeliveryBoy';
 import { CompanySetting } from '@/lib/models/CompanySetting';
 import { logAudit } from '@/lib/audit';
 
@@ -54,25 +55,33 @@ export async function POST(req: NextRequest) {
     await connectDB();
     const body = await req.json();
 
-    if (!body.parcelId) {
-      return NextResponse.json({ error: 'Parcel ID is required' }, { status: 400 });
-    }
+    const cleanParcelId = body.parcelId && body.parcelId.trim()
+      ? body.parcelId.trim().toUpperCase()
+      : `NX-DEL-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
-    const cleanParcelId = body.parcelId.trim().toUpperCase();
-
-    // Prevent duplicate Parcel ID
-    const existing = await Delivery.findOne({ parcelId: cleanParcelId });
-    if (existing) {
-      return NextResponse.json(
-        { error: `Parcel ID '${cleanParcelId}' already exists in the system!` },
-        { status: 400 }
-      );
+    // Prevent duplicate Parcel ID if explicitly provided
+    if (body.parcelId) {
+      const existing = await Delivery.findOne({ parcelId: cleanParcelId });
+      if (existing) {
+        return NextResponse.json(
+          { error: `Parcel ID '${cleanParcelId}' already exists in the system!` },
+          { status: 400 }
+        );
+      }
     }
 
     // Get current rates from settings
     const settings = (await CompanySetting.findOne()) || { companyRate: 18, driverCommission: 13 };
     const companyRate = settings.companyRate || 18;
-    const driverCommission = settings.driverCommission || 13;
+    let driverCommission = settings.driverCommission || 13;
+
+    // Look up specific driver's commission rate if deliveryBoyId is provided
+    if (body.deliveryBoyId) {
+      const driver = await DeliveryBoy.findById(body.deliveryBoyId);
+      if (driver && driver.defaultCommission !== undefined && driver.defaultCommission !== null) {
+        driverCommission = driver.defaultCommission;
+      }
+    }
 
     // Rules: ONLY SUCCESSFUL deliveries generate company revenue and driver commission!
     const isSuccessful = body.status === 'SUCCESSFUL';
