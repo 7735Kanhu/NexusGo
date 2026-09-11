@@ -36,6 +36,32 @@ export default function PaymentsPage() {
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [receiptData, setReceiptData] = useState<any>(null);
 
+  // Helper functions for salary slip
+  const formatMonthYear = (monthStr: string): string => {
+    if (!monthStr) return '';
+    const parts = monthStr.split('-');
+    if (parts.length < 2) return monthStr;
+    const date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, 1);
+    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  };
+
+  const numberToWords = (num: number): string => {
+    if (!num || num <= 0) return 'Zero Rupees Only';
+    const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+    const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+    const inWords = (n: number): string => {
+      if (n < 20) return a[n];
+      if (n < 100) return b[Math.floor(n / 10)] + (n % 10 ? ' ' + a[n % 10] : '');
+      if (n < 1000) return a[Math.floor(n / 100)] + ' Hundred' + (n % 100 ? ' ' + inWords(n % 100) : '');
+      if (n < 100000) return inWords(Math.floor(n / 1000)) + ' Thousand' + (n % 1000 ? ' ' + inWords(n % 1000) : '');
+      if (n < 10000000) return inWords(Math.floor(n / 100000)) + ' Lakh' + (n % 100000 ? ' ' + inWords(n % 100000) : '');
+      return inWords(Math.floor(n / 10000000)) + ' Crore' + (n % 10000000 ? ' ' + inWords(n % 10000000) : '');
+    };
+
+    return 'Rupees ' + inWords(Math.round(num)) + ' Only';
+  };
+
   const fetchPayments = async () => {
     try {
       setLoading(true);
@@ -336,89 +362,256 @@ export default function PaymentsPage() {
           </div>
         )}
 
-        {/* MODAL 2: PRINTABLE PAYMENT RECEIPT */}
+        {/* MODAL 2: PRINTABLE OFFICIAL SALARY SLIP */}
         {showReceiptModal && receiptData && (
-          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-6 printable-receipt">
-              <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white font-bold flex items-center justify-center">
+          <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto printable-modal-overlay">
+            <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-6 printable-receipt my-auto">
+              {/* Header with Company Logo & Document Info */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b-2 border-slate-900 pb-4 gap-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-slate-900 text-emerald-400 font-black text-xl flex items-center justify-center shadow-md">
                     NG
                   </div>
                   <div>
-                    <h3 className="font-extrabold text-slate-900 text-base">NexusGo Logistics</h3>
-                    <p className="text-[10px] text-slate-500">Official Delivery Driver Payout Receipt</p>
+                    <h2 className="font-extrabold text-slate-900 text-lg uppercase tracking-tight">
+                      NexusGo Logistics Pvt. Ltd.
+                    </h2>
+                    <p className="text-xs text-slate-500 font-medium">Express Fleet Operations & Delivery Network</p>
+                    <p className="text-[10px] text-slate-400 font-mono mt-0.5">
+                      Reg. Address: Plot 42, Tech City, Cyber Hub | GSTIN: 21ABCDE1234F1Z5
+                    </p>
                   </div>
                 </div>
-                <button
-                  onClick={() => setShowReceiptModal(false)}
-                  className="text-slate-400 hover:text-slate-600 no-print"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+                <div className="text-left sm:text-right border-l-2 sm:border-l-0 border-slate-200 pl-3 sm:pl-0">
+                  <span className="inline-block px-2.5 py-1 bg-slate-900 text-emerald-400 text-[11px] font-black tracking-wider uppercase rounded-md mb-1">
+                    PAYSLIP / SALARY SLIP
+                  </span>
+                  <div className="text-xs font-bold text-slate-800">
+                    Month:{' '}
+                    <span className="text-emerald-700 font-extrabold">
+                      {formatMonthYear(receiptData.month)}
+                    </span>
+                  </div>
+                  <div className="text-[10px] font-mono text-slate-400">
+                    Slip No: PAY-{receiptData.month.replace('-', '')}-{receiptData.driver.deliveryBoyId?.slice(-6) || '001'}
+                  </div>
+                  <div className="text-[10px] text-slate-400">Issue Date: {formatDate(new Date())}</div>
+                </div>
               </div>
 
-              {/* Driver & Statement Header */}
-              <div className="grid grid-cols-2 gap-4 text-xs bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-                <div>
-                  <span className="text-slate-400 block">Driver Name</span>
-                  <strong className="text-slate-900 text-sm">{receiptData.driver.fullName}</strong>
-                  <span className="block text-[11px] text-slate-500 font-mono">
-                    ID: {receiptData.driver.deliveryBoyId}
+              {/* Employee & Bank Info Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <div className="space-y-1">
+                  <h4 className="font-bold text-slate-900 uppercase text-[11px] tracking-wider border-b border-slate-200 pb-1 mb-1.5 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Employee Details
+                  </h4>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Driver Name:</span>
+                    <strong className="text-slate-900 font-semibold">{receiptData.driver.fullName}</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Driver ID:</span>
+                    <strong className="font-mono text-slate-800">{receiptData.driver.deliveryBoyId}</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Phone:</span>
+                    <span className="font-medium text-slate-700">{receiptData.driver.phone || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Designation:</span>
+                    <span className="font-semibold text-slate-800">Senior Delivery Partner</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Pay Type:</span>
+                    <span className="font-bold text-emerald-800">
+                      {receiptData.driver.paymentType === 'SALARY'
+                        ? 'Fixed Monthly Salary'
+                        : 'Per-Parcel Commission'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <h4 className="font-bold text-slate-900 uppercase text-[11px] tracking-wider border-b border-slate-200 pb-1 mb-1.5 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Bank & Payment Account
+                  </h4>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Bank Name:</span>
+                    <strong className="text-slate-900">
+                      {receiptData.driver.bankDetails?.bankName || 'State Bank of India'}
+                    </strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Account No:</span>
+                    <span className="font-mono text-slate-800">
+                      {receiptData.driver.bankDetails?.accountNumber || '••••••••4829'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">IFSC Code:</span>
+                    <span className="font-mono text-slate-800">
+                      {receiptData.driver.bankDetails?.ifscCode || 'SBIN0001234'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">UPI ID:</span>
+                    <span className="font-mono text-slate-800">
+                      {receiptData.driver.bankDetails?.upiId || `${receiptData.driver.phone || 'driver'}@upi`}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500">Payment Status:</span>
+                    <span
+                      className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${
+                        receiptData.status === 'PAID'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : receiptData.status === 'PARTIALLY_PAID'
+                          ? 'bg-amber-100 text-amber-800'
+                          : 'bg-rose-100 text-rose-800'
+                      }`}
+                    >
+                      {receiptData.status}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Performance Indicator Bar */}
+              <div className="flex items-center justify-between bg-slate-900 text-white px-4 py-2.5 rounded-xl text-xs font-medium shadow-sm">
+                <span>
+                  Successful Completed Deliveries:{' '}
+                  <strong className="text-emerald-400 font-extrabold text-sm">
+                    {receiptData.totalSuccessfulDeliveries} Parcels
+                  </strong>
+                </span>
+                <span>
+                  Commission Rate:{' '}
+                  <strong className="text-emerald-400 font-bold">
+                    ₹{receiptData.commissionRate} / parcel
+                  </strong>
+                </span>
+              </div>
+
+              {/* Earnings & Deductions Breakdown Table */}
+              <div className="border border-slate-200 rounded-xl overflow-hidden text-xs">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-100 text-slate-800 font-bold uppercase text-[11px] border-b border-slate-200">
+                      <th className="py-2.5 px-3 border-r border-slate-200 w-1/2">Earnings Particulars</th>
+                      <th className="py-2.5 px-3 border-r border-slate-200 text-right w-1/6">Amount (₹)</th>
+                      <th className="py-2.5 px-3 border-r border-slate-200 w-1/4">Deductions Particulars</th>
+                      <th className="py-2.5 px-3 text-right w-1/6">Amount (₹)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
+                    <tr>
+                      <td className="py-2 px-3 border-r border-slate-200">
+                        Gross Delivery Commission / Base Salary
+                      </td>
+                      <td className="py-2 px-3 border-r border-slate-200 text-right font-semibold text-slate-900">
+                        {formatCurrency(receiptData.grossCommission)}
+                      </td>
+                      <td className="py-2 px-3 border-r border-slate-200">Cash Advances Deducted</td>
+                      <td className="py-2 px-3 text-right font-semibold text-rose-600">
+                        -{formatCurrency(receiptData.advances)}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="py-2 px-3 border-r border-slate-200">Performance Incentive & Bonus</td>
+                      <td className="py-2 px-3 border-r border-slate-200 text-right font-semibold text-emerald-700">
+                        +{formatCurrency(receiptData.bonus)}
+                      </td>
+                      <td className="py-2 px-3 border-r border-slate-200">Penalties / Deductions</td>
+                      <td className="py-2 px-3 text-right font-semibold text-rose-600">
+                        -{formatCurrency(receiptData.deductions)}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="py-2 px-3 border-r border-slate-200">Approved Expense Reimbursements</td>
+                      <td className="py-2 px-3 border-r border-slate-200 text-right font-semibold text-emerald-700">
+                        +{formatCurrency(receiptData.approvedExpenses)}
+                      </td>
+                      <td className="py-2 px-3 border-r border-slate-200 text-slate-400">-</td>
+                      <td className="py-2 px-3 text-right text-slate-400">₹0.00</td>
+                    </tr>
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-slate-50 font-bold border-t-2 border-slate-300 text-slate-900">
+                      <td className="py-2.5 px-3 border-r border-slate-200 uppercase">
+                        Total Gross Earnings (A)
+                      </td>
+                      <td className="py-2.5 px-3 border-r border-slate-200 text-right text-emerald-800 font-extrabold">
+                        {formatCurrency(
+                          receiptData.grossCommission + receiptData.bonus + receiptData.approvedExpenses
+                        )}
+                      </td>
+                      <td className="py-2.5 px-3 border-r border-slate-200 uppercase">
+                        Total Deductions (B)
+                      </td>
+                      <td className="py-2.5 px-3 text-right text-rose-700 font-extrabold">
+                        -{formatCurrency(receiptData.advances + receiptData.deductions)}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+
+              {/* Net Salary Highlights Banner */}
+              <div className="bg-slate-900 text-white rounded-xl p-4 space-y-2 border border-slate-800">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-slate-800 pb-2">
+                  <div>
+                    <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">
+                      NET SALARY PAYABLE (A - B)
+                    </span>
+                    <p className="text-[11px] text-emerald-400 font-medium italic mt-0.5">
+                      {numberToWords(receiptData.netPayable)}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-2xl font-black text-emerald-400 tracking-tight block">
+                      {formatCurrency(receiptData.netPayable)}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex justify-between text-[11px] text-slate-300 pt-0.5">
+                  <span>
+                    Amount Settled / Paid:{' '}
+                    <strong className="text-white">{formatCurrency(receiptData.alreadyPaid)}</strong>
+                  </span>
+                  <span>
+                    Remaining Unpaid Balance:{' '}
+                    <strong className="text-amber-400">{formatCurrency(receiptData.remaining)}</strong>
                   </span>
                 </div>
-                <div className="text-right">
-                  <span className="text-slate-400 block">Month / Date</span>
-                  <strong className="text-slate-900 text-sm">{receiptData.month}</strong>
-                  <span className="block text-[11px] text-emerald-700 font-bold">
-                    Status: {receiptData.status}
-                  </span>
+              </div>
+
+              {/* Authorizations & Signatures */}
+              <div className="pt-4 border-t border-slate-200 grid grid-cols-2 gap-8 text-xs">
+                <div className="text-center pt-8 border-t border-dashed border-slate-300">
+                  <p className="font-semibold text-slate-700">Driver / Employee Signature</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">{receiptData.driver.fullName}</p>
+                </div>
+                <div className="text-center pt-8 border-t border-dashed border-slate-300 relative">
+                  <div className="absolute top-0 right-1/2 translate-x-1/2 -translate-y-4 px-3 py-1 border-2 border-emerald-600/30 rounded-full text-[9px] font-black text-emerald-800 uppercase tracking-widest bg-emerald-50/50 rotate-[-4deg]">
+                    NEXUSGO VERIFIED
+                  </div>
+                  <p className="font-semibold text-slate-700">Authorized Signatory</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">NexusGo Logistics Operations Manager</p>
                 </div>
               </div>
 
-              {/* Financial Calculation Itemization */}
-              <div className="space-y-2 text-xs font-mono">
-                <div className="flex justify-between py-1 border-b border-slate-100">
-                  <span>Successful Deliveries:</span>
-                  <strong>{receiptData.totalSuccessfulDeliveries} Parcels</strong>
-                </div>
-                <div className="flex justify-between py-1 border-b border-slate-100">
-                  <span>Commission Rate:</span>
-                  <strong>₹{receiptData.commissionRate} / parcel</strong>
-                </div>
-                <div className="flex justify-between py-1 border-b border-slate-100 font-bold text-slate-900">
-                  <span>Gross Commission:</span>
-                  <span>{formatCurrency(receiptData.grossCommission)}</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-slate-100 text-emerald-700">
-                  <span>+ Performance Bonus:</span>
-                  <span>+{formatCurrency(receiptData.bonus)}</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-slate-100 text-emerald-700">
-                  <span>+ Approved Expenses:</span>
-                  <span>+{formatCurrency(receiptData.approvedExpenses)}</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-slate-100 text-rose-600">
-                  <span>- Cash Advances Deducted:</span>
-                  <span>-{formatCurrency(receiptData.advances)}</span>
-                </div>
-                <div className="flex justify-between py-2 bg-emerald-900 text-white px-3 rounded-lg font-extrabold text-sm mt-2">
-                  <span>NET PAYABLE AMOUNT:</span>
-                  <span>{formatCurrency(receiptData.netPayable)}</span>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between no-print pt-2">
+              {/* Modal Action Buttons (Hidden when printing) */}
+              <div className="flex items-center justify-between no-print pt-2 border-t border-slate-100">
                 <button
                   onClick={printReceipt}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center gap-2"
+                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-emerald-600/30 transition-all cursor-pointer"
                 >
                   <Printer className="w-4 h-4" />
-                  <span>Print Receipt</span>
+                  <span>Print Official Salary Slip</span>
                 </button>
                 <button
                   onClick={() => setShowReceiptModal(false)}
-                  className="px-4 py-2 bg-slate-100 text-slate-700 font-semibold rounded-xl text-xs"
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs cursor-pointer transition-all"
                 >
                   Close
                 </button>
