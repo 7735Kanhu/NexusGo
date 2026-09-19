@@ -60,7 +60,7 @@ export async function sendDriverWelcomeEmail(params: SendWelcomeEmailParams) {
         <div class="container">
           <div class="header">
             <h1>🚚 Welcome to NexusGo Logistics!</h1>
-            <p>Official Delivery Driver Employee Registration Confirmation</p>
+            <p>Official Delivery Partner Registration Confirmation</p>
           </div>
           <div class="content">
             <p>Hello <strong>${driverName}</strong>,</p>
@@ -75,7 +75,7 @@ export async function sendDriverWelcomeEmail(params: SendWelcomeEmailParams) {
                 <span class="detail-val">${driverName}</span>
               </div>
               <div class="detail-row">
-                <span class="detail-label">Employee ID (FHRID):</span>
+                <span class="detail-label">Member ID / FHRID:</span>
                 <span class="detail-val" style="color: #047857; font-weight: 800;">${effectiveId}</span>
               </div>
               <div class="detail-row">
@@ -96,7 +96,7 @@ export async function sendDriverWelcomeEmail(params: SendWelcomeEmailParams) {
               </div>
             </div>
 
-            <p>Please report to the central Noida Logistics Hub for operational guidelines and route assignment. Always quote your <strong>Employee ID (${effectiveId})</strong> for attendance and payout verification.</p>
+            <p>Please report to the central Logistics Hub for operational guidelines and route assignment. Always quote your <strong>Employee ID / FHRID (${effectiveId})</strong> for attendance, parcel pickups, and payout verification.</p>
             <p style="font-size: 13px; color: #64748b; margin-top: 20px;">
               If you have any questions regarding your registration or payouts, please contact your logistics manager.
             </p>
